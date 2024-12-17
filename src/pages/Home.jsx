@@ -5,23 +5,18 @@ import SearchBar from '../components/SearchBar';
 import ViewToggle from '../components/ViewToggle';
 
 function Home() {
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState();
   const [isGridView, setIsGridView] = useState(true);
   const [data, setData] = useState([]);
 
-  async function fetchData() {
-    const response = await getCanvases();
+  async function fetchData(params) {
+    const response = await getCanvases(params);
     setData(response.data);
-    console.log(response);
   }
 
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  const filteredData = data.filter(item =>
-    item.title.toLowerCase().includes(searchText.toLowerCase()),
-  );
+    fetchData({ title_like: searchText });
+  }, [searchText]);
 
   const handleDeleteItem = id => {
     setData(data.filter(item => item.id !== id));
@@ -34,7 +29,7 @@ function Home() {
         <ViewToggle isGridView={isGridView} setIsGridView={setIsGridView} />
       </div>
       <CanvasList
-        filteredData={filteredData}
+        filteredData={data}
         isGridView={isGridView}
         searchText={searchText}
         onDeleteItem={handleDeleteItem}
