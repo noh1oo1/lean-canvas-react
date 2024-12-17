@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { getCanvases } from '../api/canvas';
 import CanvasList from '../components/CanvasList';
 import SearchBar from '../components/SearchBar';
 import ViewToggle from '../components/ViewToggle';
@@ -9,10 +10,9 @@ function Home() {
   const [data, setData] = useState([]);
 
   async function fetchData() {
-    const data = await fetch('http://localhost:8000/canvases')
-      .then(res => res.json())
-      .catch(console.error);
-    setData(data);
+    const response = await getCanvases();
+    setData(response.data);
+    console.log(response);
   }
 
   useEffect(() => {
