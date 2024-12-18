@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getCanvases, createCanvas, deleteCanvas } from '../api/canvas';
 import CanvasList from '../components/CanvasList';
 import SearchBar from '../components/SearchBar';
@@ -10,52 +11,36 @@ import Button from '../components/Button';
 function Home() {
   const [searchText, setSearchText] = useState();
   const [isGridView, setIsGridView] = useState(true);
-  const [data, setData] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isLoadingCreate, setIsLoadingCreate] = useState(false);
 
-  async function fetchData(params) {
-    try {
-      setIsLoading(true);
-      setError(null);
-      await new Promise(resolver => setTimeout(resolver, 2000));
-      const response = await getCanvases(params);
-      setData(response.data);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchData({ title_like: searchText });
-  }, [searchText]);
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['canvases', searchText],
+    queryFn: () => getCanvases({ title_like: searchText }),
+    initialData: [],
+  });
+
+  const { mutate: createNewCanvas, isLoading: isLoadingCreate } = useMutation({
+    mutationFn: createCanvas,
+    onSuccess: () => queryClient.invalidateQueries(['canvases']),
+    onError: err => alert(err.message),
+  });
+
+  const { mutate: deleteCanvasMutation } = useMutation({
+    mutationFn: deleteCanvas,
+    onSuccess: () => queryClient.invalidateQueries(['canvases']),
+    onError: err => alert(err.message),
+  });
 
   const handleCreateCanvas = async () => {
-    try {
-      setIsLoadingCreate(true);
-      await new Promise(resolver => setTimeout(resolver, 2000));
-      await createCanvas();
-      fetchData({ title_like: searchText });
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setIsLoadingCreate(false);
-    }
+    createNewCanvas();
   };
 
   const handleDeleteItem = async id => {
     if (confirm('삭제하시겠습니까?') === false) {
       return;
     }
-    try {
-      await deleteCanvas(id);
-      fetchData({ title_like: searchText });
-    } catch (err) {
-      alert(err.message);
-    }
+    deleteCanvasMutation(id);
   };
 
   return (
@@ -70,12 +55,7 @@ function Home() {
         </Button>
       </div>
       {isLoading && <Loading />}
-      {error && (
-        <Error
-          message={error.message}
-          onRetry={() => fetchData({ title_like: searchText })}
-        />
-      )}
+      {error && <Error message={error.message} onRetry={refetch} />}
       {!isLoading && !error && (
         <CanvasList
           filteredData={data}
